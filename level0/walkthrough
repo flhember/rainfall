@@ -1,0 +1,16 @@
+For the level0, we have one binery file.
+We open with gdb and disassemble main function.
+we see at main + 25, the first comparison with return of atoi and 0x1a7.
+atoi take the fist argument of the programme.
+0x1a7 = 423
+So let start the programme with 423:
+
+level0@RainFall:~$ ./level0 423
+$ whoami
+level1
+$
+
+We have a level1 shell, let cat .pass file.
+
+$ cat /home/user/level1/.pass
+1fe8a524fa4bec01ca4ea2a869af2a02260d4a7d5fe7e7c24d8617e6dca12d3a
