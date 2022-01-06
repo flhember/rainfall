@@ -4,15 +4,14 @@
 #include <stdio.h>
 #include <string.h>
 
-int		m;
-
 void		v()
 {
 	char			str[512];
 
 	fgets(str, 512, stdin);
-	printf (str);
-	if (m == 64)
+	printf ("%s", str);
+	int i = 0;
+	if (i == 64)
 	{
 		fwrite("Wait what?!", 11, 1, stdout);
 		system("/bin/sh");

