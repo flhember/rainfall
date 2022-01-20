@@ -17,7 +17,9 @@ void		m()
 void		main(int ac, char **av)
 {
 	char *str = (char *) malloc( 64 );
-    char *str1 = (char *) malloc( 4 );
-	void *test = &m;
-	strcpy(str1, av[1]);
+    	void (*fun_ptr)(void) = malloc( 4 );
+
+	fun_ptr = &m;
+	strcpy(str, av[1]);
+	fun_ptr();
 }

