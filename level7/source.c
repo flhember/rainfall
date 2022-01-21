@@ -6,5 +6,8 @@
 
 void		main(int ac, char **av)
 {
-	char *str = (char *) malloc(20 );
+	char *str = (char *) malloc(20);
+	char *str = (char *) malloc(20);
+	char *str = (char *) malloc(20);
+	char *str = (char *) malloc(20);
 }
