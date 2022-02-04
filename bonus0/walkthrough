@@ -1,0 +1,4 @@
+ bonus0@RainFall:~$ readelf -a bonus0 | grep "STACK"
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x4
+
+0xbfffe670
