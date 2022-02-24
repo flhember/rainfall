@@ -14,12 +14,12 @@ int		main(int ac, char **av)
 		str = strdup("/bin/sh");
 
 		gid_t gid;
-    	uid_t uid;
-    	gid = getegid();
-    	uid = geteuid();
+		uid_t uid;
+		gid = getegid();
+		uid = geteuid();
 
-    	setresgid(gid, gid, gid);
-    	setresuid(uid, uid, uid);
+		setresgid(gid, gid, gid);
+		setresuid(uid, uid, uid);
 		execv(str, NULL);
 	} else {
 		fwrite("No !\n", 5, 1, stderr);

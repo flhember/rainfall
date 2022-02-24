@@ -1,19 +1,21 @@
-//gcc -fno-stack-protector -z execstack -Wl,-z,norelro
-
-#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
-void		n()
+void o()
 {
-	char			str[512];
+	system("/bin/sh");
+	exit(1);
+}
 
+void n()
+{
+	char str[512];
 	fgets(str, 512, stdin);
 	printf(str);
 	exit(1);
 }
 
-void		main()
+int main()
 {
 	n();
 }
